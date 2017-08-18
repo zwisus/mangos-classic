@@ -307,6 +307,13 @@ void Spell::EffectSchoolDMG(SpellEffectIndex effect_idx)
                             damage = 200;
                         break;
                     }
+                    // Judgement of Command
+                    case 20467:    case 20963:    case 20964:    case 20965:    case 20966:
+                    {
+                        if(!unitTarget->hasUnitState(UNIT_STAT_STUNNED) && m_caster->GetTypeId() == TYPEID_PLAYER)
+                            { damage /= 2; }
+                        break;
+                    }
                 }
                 break;
             }
