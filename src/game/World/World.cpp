@@ -1103,6 +1103,9 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading Waypoint scripts...");          // before loading from creature_movement
     sScriptMgr.LoadCreatureMovementScripts();
 
+    sLog.outString("Loading Relay scripts...");
+    sScriptMgr.LoadRelayScripts();
+
     sLog.outString("Loading Waypoints...");
     sWaypointMgr.Load();
 
@@ -1164,6 +1167,9 @@ void World::SetInitialWorldSettings()
     sScriptMgr.LoadCreatureDeathScripts();                  // must be after load Creature/Gameobject(Template/Data)
     sLog.outString(">>> Scripts loaded");
     sLog.outString();
+
+    sLog.outString("Loading Scripts random templates...");      // must be before String calls
+    sScriptMgr.LoadDbScriptRandomTemplates();
 
     sLog.outString("Loading Scripts text locales...");      // must be after Load*Scripts calls
     sScriptMgr.LoadDbScriptStrings();
