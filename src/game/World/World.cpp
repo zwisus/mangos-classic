@@ -89,6 +89,8 @@ float World::m_VisibleObjectGreyDistance      = 0;
 float  World::m_relocation_lower_limit_sq     = 10.f * 10.f;
 uint32 World::m_relocation_ai_notify_delay    = 1000u;
 
+TimePoint World::m_currentTime = TimePoint();
+
 /// World constructor
 World::World(): mail_timer(0), mail_timer_expires(0)
 {
@@ -1087,9 +1089,27 @@ void World::SetInitialWorldSettings()
     sLog.outString("Loading Npc Text Id...");
     sObjectMgr.LoadNpcGossips();                            // must be after load Creature and LoadGossipText
 
-    sLog.outString("Loading Gossip scripts...");
+    sLog.outString("Loading Scripts random templates...");  // must be before String calls
+    sScriptMgr.LoadDbScriptRandomTemplates();
+                                                            ///- Load and initialize DBScripts Engine
+    sLog.outString("Loading DB-Scripts Engine...");
+    sScriptMgr.LoadRelayScripts();                          // must be first in dbscripts loading
     sScriptMgr.LoadGossipScripts();                         // must be before gossip menu options
+    sScriptMgr.LoadQuestStartScripts();                     // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
+    sScriptMgr.LoadQuestEndScripts();                       // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
+    sScriptMgr.LoadSpellScripts();                          // must be after load Creature/Gameobject(Template/Data)
+    sScriptMgr.LoadGameObjectScripts();                     // must be after load Creature/Gameobject(Template/Data)
+    sScriptMgr.LoadGameObjectTemplateScripts();             // must be after load Creature/Gameobject(Template/Data)
+    sScriptMgr.LoadEventScripts();                          // must be after load Creature/Gameobject(Template/Data)
+    sScriptMgr.LoadCreatureDeathScripts();                  // must be after load Creature/Gameobject(Template/Data)
+    sScriptMgr.LoadCreatureMovementScripts();               // before loading from creature_movement
+    sLog.outString(">>> Scripts loaded");
+    sLog.outString();
 
+    sLog.outString("Loading Scripts text locales...");      // must be after Load*Scripts calls
+    sScriptMgr.LoadDbScriptStrings();
+
+    sLog.outString("Loading Gossip Menus...");
     sObjectMgr.LoadGossipMenus();
 
     sLog.outString("Loading Vendors...");
@@ -1100,11 +1120,7 @@ void World::SetInitialWorldSettings()
     sObjectMgr.LoadTrainerTemplates();                      // must be after load CreatureTemplate
     sObjectMgr.LoadTrainers();                              // must be after load CreatureTemplate, TrainerTemplate
 
-    sLog.outString("Loading Waypoint scripts...");          // before loading from creature_movement
-    sScriptMgr.LoadCreatureMovementScripts();
-
-    sLog.outString("Loading Relay scripts...");
-    sScriptMgr.LoadRelayScripts();
+    sLog.outString("Loading Waypoint scripts...");          
 
     sLog.outString("Loading Waypoints...");
     sWaypointMgr.Load();
@@ -1155,24 +1171,6 @@ void World::SetInitialWorldSettings()
 
     sLog.outString("Loading GM tickets...");
     sTicketMgr.LoadGMTickets();
-
-    ///- Load and initialize DBScripts Engine
-    sLog.outString("Loading DB-Scripts Engine...");
-    sScriptMgr.LoadQuestStartScripts();                     // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
-    sScriptMgr.LoadQuestEndScripts();                       // must be after load Creature/Gameobject(Template/Data) and QuestTemplate
-    sScriptMgr.LoadSpellScripts();                          // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadGameObjectScripts();                     // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadGameObjectTemplateScripts();             // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadEventScripts();                          // must be after load Creature/Gameobject(Template/Data)
-    sScriptMgr.LoadCreatureDeathScripts();                  // must be after load Creature/Gameobject(Template/Data)
-    sLog.outString(">>> Scripts loaded");
-    sLog.outString();
-
-    sLog.outString("Loading Scripts random templates...");      // must be before String calls
-    sScriptMgr.LoadDbScriptRandomTemplates();
-
-    sLog.outString("Loading Scripts text locales...");      // must be after Load*Scripts calls
-    sScriptMgr.LoadDbScriptStrings();
 
     ///- Load and initialize EventAI Scripts
     sLog.outString("Loading CreatureEventAI Texts...");
@@ -1347,6 +1345,8 @@ void World::DetectDBCLang()
 /// Update the World !
 void World::Update(uint32 diff)
 {
+    m_currentTime = std::chrono::time_point_cast<std::chrono::milliseconds>(Clock::now());
+
     ///- Update the different timers
     for (int i = 0; i < WUPDATE_COUNT; ++i)
     {

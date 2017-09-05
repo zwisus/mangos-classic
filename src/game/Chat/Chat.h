@@ -206,6 +206,7 @@ class ChatHandler
 
         bool HandleDebugAnimCommand(char* args);
         bool HandleDebugBattlegroundCommand(char* args);
+        bool HandleDebugBattlegroundStartCommand(char* args);
         bool HandleDebugGetItemStateCommand(char* args);
         bool HandleDebugGetItemValueCommand(char* args);
         bool HandleDebugGetLootRecipientCommand(char* args);
@@ -544,7 +545,9 @@ class ChatHandler
         bool HandleUnmuteCommand(char* args);
         bool HandleMovegensCommand(char* args);
 
-        bool HandleCooldownCommand(char* args);
+        bool HandleCooldownListCommand(char* args);
+        bool HandleCooldownClearCommand(char* args);
+        bool HandleCooldownClearClientSideCommand(char* args);
         bool HandleUnLearnCommand(char* args);
         bool HandleGetDistanceCommand(char* args);
         bool HandleModifyStandStateCommand(char* args);

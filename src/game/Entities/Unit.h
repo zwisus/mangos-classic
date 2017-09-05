@@ -884,30 +884,6 @@ enum CurrentSpellTypes
 #define CURRENT_FIRST_NON_MELEE_SPELL 1
 #define CURRENT_MAX_SPELL             4
 
-struct GlobalCooldown
-{
-    explicit GlobalCooldown(uint32 _dur = 0, uint32 _time = 0) : duration(_dur), cast_time(_time) {}
-
-    uint32 duration;
-    uint32 cast_time;
-};
-
-typedef std::unordered_map < uint32 /*category*/, GlobalCooldown > GlobalCooldownList;
-
-class GlobalCooldownMgr                                     // Shared by Player and CharmInfo
-{
-    public:
-        GlobalCooldownMgr() {}
-
-    public:
-        bool HasGlobalCooldown(SpellEntry const* spellInfo) const;
-        void AddGlobalCooldown(SpellEntry const* spellInfo, uint32 gcd);
-        void CancelGlobalCooldown(SpellEntry const* spellInfo);
-
-    private:
-        GlobalCooldownList m_GlobalCooldowns;
-};
-
 enum ActiveStates
 {
     ACT_PASSIVE  = 0x01,                                    // 0x01 - passive
@@ -1020,8 +996,6 @@ class CharmInfo
 
         CharmSpellEntry* GetCharmSpell(uint8 index) { return &(m_charmspells[index]); }
 
-        GlobalCooldownMgr& GetGlobalCooldownMgr() { return m_GlobalCooldownMgr; }
-
         void SetIsRetreating(bool retreating = false) { m_retreating = retreating; }
         bool GetIsRetreating() { return m_retreating; }
 
@@ -1056,7 +1030,6 @@ class CharmInfo
         CommandStates       m_CommandState;
         ReactStates         m_reactState;
         uint32              m_petnumber;
-        GlobalCooldownMgr   m_GlobalCooldownMgr;
         uint32              m_opener;
         uint32              m_openerMinRange;
         uint32              m_openerMaxRange;
@@ -1710,17 +1683,23 @@ class Unit : public WorldObject
         void SetTargetGuid(ObjectGuid targetGuid) { SetGuidValue(UNIT_FIELD_TARGET, targetGuid); }
         ObjectGuid const& GetChannelObjectGuid() const { return GetGuidValue(UNIT_FIELD_CHANNEL_OBJECT); }
         void SetChannelObjectGuid(ObjectGuid targetGuid) { SetGuidValue(UNIT_FIELD_CHANNEL_OBJECT, targetGuid); }
+        virtual ObjectGuid const GetSpawnerGuid() const { return ObjectGuid(); }
 
         Player* GetSpellModOwner() const;
 
         Unit* GetOwner(bool recursive = false) const;
         Unit* GetMaster() const;
 
-        // Beneficiary: master or self
+        // Beneficiary: master or self (serverside)
         Unit const* GetBeneficiary() const;
         Unit* GetBeneficiary();
         Player const* GetBeneficiaryPlayer() const;
         Player* GetBeneficiaryPlayer();
+
+        // Controlling player: limited recursive master/beneficiary (clientside)
+        Player const* GetControllingPlayer() const;
+
+        Unit* GetSpawner() const; // serverside only logic used to determine spawner of unit
 
         Unit* GetSummoner() const;
         Unit* GetCreator() const;
@@ -1808,7 +1787,6 @@ class Unit : public WorldObject
         float GetCreateStat(Stats stat) const { return m_createStats[stat]; }
 
         void SetCurrentCastedSpell(Spell* pSpell);
-        virtual void ProhibitSpellSchool(SpellSchoolMask /*idSchoolMask*/, uint32 /*unTimeMs*/) { }
         void InterruptSpell(CurrentSpellTypes spellType, bool withDelayed = true);
         void FinishSpell(CurrentSpellTypes spellType, bool ok = true);
 
@@ -2241,6 +2219,8 @@ class Unit : public WorldObject
 
         ObjectGuid m_fixateTargetGuid;                      //< Stores the Guid of a fixated target
 
+        // Need to safeguard aura application in Unit::Update
+        bool m_spellUpdateHappening;
     private:                                                // Error traps for some wrong args using
         // this will catch and prevent build for any cases when all optional args skipped and instead triggered used non boolean type
         // no bodies expected for this declarations
